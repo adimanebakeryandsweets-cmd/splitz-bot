@@ -18,6 +18,7 @@ import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.ValueCallback;
 import android.webkit.WebViewClient;
 
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ public class MainActivity extends Activity {
     private WebView web;
     private boolean tracking = false;
     private boolean asked = false;
+    private ValueCallback<Uri[]> fileCb;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -43,6 +45,14 @@ public class MainActivity extends Activity {
         web.setWebChromeClient(new WebChromeClient() {
             @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
                 cb.invoke(origin, hasLocation(), false);
+            }
+            // lets the registration page pick photos and documents
+            @Override public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams params) {
+                if (fileCb != null) fileCb.onReceiveValue(null);
+                fileCb = cb;
+                try { startActivityForResult(params.createIntent(), 77); }
+                catch (Exception e) { fileCb = null; return false; }
+                return true;
             }
         });
         web.setWebViewClient(new WebViewClient() {
@@ -94,6 +104,14 @@ public class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
         super.onRequestPermissionsResult(code, perms, res);
         if (code == 1) { web.reload(); askBackground(); }
+    }
+
+    @Override protected void onActivityResult(int code, int res, Intent data) {
+        super.onActivityResult(code, res, data);
+        if (code == 77 && fileCb != null) {
+            fileCb.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res, data));
+            fileCb = null;
+        }
     }
 
     private void setTracking(boolean on) {
