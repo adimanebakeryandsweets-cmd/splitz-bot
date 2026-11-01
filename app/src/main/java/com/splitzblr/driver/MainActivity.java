@@ -46,6 +46,17 @@ public class MainActivity extends Activity {
             @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
                 cb.invoke(origin, hasLocation(), false);
             }
+            // internet calls with the rider: allow the page to use the microphone once the phone permission is given
+            @Override public void onPermissionRequest(final android.webkit.PermissionRequest req) {
+                runOnUiThread(new Runnable() { public void run() {
+                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        req.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                    } else {
+                        pendingReq = req;
+                        requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 3);
+                    }
+                }});
+            }
             // lets the registration page pick photos and documents
             @Override public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams params) {
                 if (fileCb != null) fileCb.onReceiveValue(null);
@@ -101,8 +112,17 @@ public class MainActivity extends Activity {
         }
     }
 
+    private android.webkit.PermissionRequest pendingReq;
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
         super.onRequestPermissionsResult(code, perms, res);
+        if (code == 3) {
+            if (pendingReq != null) {
+                if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) pendingReq.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                else pendingReq.deny();
+                pendingReq = null;
+            }
+            return;
+        }
         if (code == 1) { web.reload(); askBackground(); }
     }
 
