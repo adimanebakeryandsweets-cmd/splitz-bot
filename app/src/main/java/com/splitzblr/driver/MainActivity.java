@@ -161,32 +161,61 @@ public class MainActivity extends Activity {
         stopService(new Intent(this, AlertService.class));
     }
 
-    // Once: let the alerts reach the lock screen and keep running while the phone sleeps.
+    private android.app.AlertDialog setupDlg;
+    private long laterUntil = 0;
+
+    private boolean okOverlay() { return Build.VERSION.SDK_INT < 23 || android.provider.Settings.canDrawOverlays(this); }
+    private boolean okBattery() {
+        if (Build.VERSION.SDK_INT < 23) return true;
+        return ((android.os.PowerManager) getSystemService(POWER_SERVICE)).isIgnoringBatteryOptimizations(getPackageName());
+    }
+    private boolean okFullScreen() {
+        if (Build.VERSION.SDK_INT < 34) return true;
+        return ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).canUseFullScreenIntent();
+    }
+    private boolean okNotify() {
+        return Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    // Shown every time the app opens until each switch is on, so rides always ring.
     private void askAlertSetup() {
-        android.content.SharedPreferences sp = getSharedPreferences(AlertService.PREFS, MODE_PRIVATE);
+        if (isFinishing() || (setupDlg != null && setupDlg.isShowing())) return;
+        if (System.currentTimeMillis() < laterUntil) return;
+        final boolean o = okOverlay(), b = okBattery(), f = okFullScreen(), n = okNotify();
+        if (o && b && f && n) return;
+        String msg = (o ? "\u2705 " : "\u274C ") + "Display over other apps\n   (rides pop up over any screen)\n\n"
+                + (b ? "\u2705 " : "\u274C ") + "Battery: Unrestricted\n   (keeps ride alerts working with the screen off)\n\n"
+                + (f ? "\u2705 " : "\u274C ") + "Full-screen alerts on the lock screen\n\n"
+                + (n ? "\u2705 " : "\u274C ") + "Notifications";
+        final boolean fo = o, fb = b, ff = f;
+        setupDlg = new android.app.AlertDialog.Builder(this)
+            .setTitle("Allow these to receive rides")
+            .setMessage(msg)
+            .setCancelable(false)
+            .setPositiveButton("Open settings", new android.content.DialogInterface.OnClickListener() {
+                public void onClick(android.content.DialogInterface d, int w) { openFirstMissing(fo, fb, ff); }
+            })
+            .setNegativeButton("Later", new android.content.DialogInterface.OnClickListener() {
+                public void onClick(android.content.DialogInterface d, int w) { laterUntil = System.currentTimeMillis() + 10 * 60000L; }
+            }).create();
+        setupDlg.show();
+    }
+
+    private void openFirstMissing(boolean o, boolean b, boolean f) {
+        Uri pkg = Uri.parse("package:" + getPackageName());
         try {
-            if (Build.VERSION.SDK_INT >= 23 && !android.provider.Settings.canDrawOverlays(this) && !sp.getBoolean("askedOvl", false)) {
-                sp.edit().putBoolean("askedOvl", true).apply();
-                android.widget.Toast.makeText(this, "Turn on \"Allow display over other apps\" so rides pop up on your screen", android.widget.Toast.LENGTH_LONG).show();
-                startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
+            if (!o) { startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, pkg)); return; }
+            if (!b) {
+                try { startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg)); }
+                catch (Exception e) { startActivity(new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); }
+                android.widget.Toast.makeText(this, "Choose Allow. If the phone has a Battery page for this app, set it to Unrestricted.", android.widget.Toast.LENGTH_LONG).show();
                 return;
             }
-            if (Build.VERSION.SDK_INT >= 34) {
-                android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-                if (!nm.canUseFullScreenIntent() && !sp.getBoolean("askedFsi", false)) {
-                    sp.edit().putBoolean("askedFsi", true).apply();
-                    startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + getPackageName())));
-                    return;
-                }
-            }
-            if (Build.VERSION.SDK_INT >= 23 && !sp.getBoolean("askedBat", false)) {
-                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
-                if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
-                    sp.edit().putBoolean("askedBat", true).apply();
-                    startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
-                }
-            }
-        } catch (Exception e) { }
+            if (!f && Build.VERSION.SDK_INT >= 34) { startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pkg)); return; }
+            if (Build.VERSION.SDK_INT >= 33) { requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 4); return; }
+        } catch (Exception e) {
+            try { startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)); } catch (Exception x) { }
+        }
     }
 
     private class Bridge {
