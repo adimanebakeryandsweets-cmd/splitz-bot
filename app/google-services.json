@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "234326484477",
+    "project_id": "splitzblr-b2b62",
+    "storage_bucket": "splitzblr-b2b62.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:234326484477:android:3cc057141ecc9bb6282594",
+        "android_client_info": {
+          "package_name": "com.splitzblr.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7ei8fpBTVKPYZNlTBMmdCLi4wqKunwjc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
