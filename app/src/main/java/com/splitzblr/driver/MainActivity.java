@@ -27,6 +27,11 @@ import java.util.List;
 public class MainActivity extends Activity {
     private static final String HOME = "https://splitzblr.com/drivers/";
     private WebView web;
+    private static MainActivity inst;
+    static void refreshWeb() {
+        final MainActivity m = inst; if (m == null || m.web == null) return;
+        m.runOnUiThread(new Runnable() { public void run() { m.web.evaluateJavascript("try{if(window.refresh)refresh(true)}catch(e){}", null); } });
+    }
     private boolean tracking = false;
     private boolean asked = false;
     private ValueCallback<Uri[]> fileCb;
@@ -263,10 +268,10 @@ public class MainActivity extends Activity {
 
     // Keep the page (and its GPS) running when the app is in the background during a trip.
     @Override protected void onPause() { super.onPause(); syncH.removeCallbacks(syncR); AlertService.appVisible = false; if (!tracking) web.onPause(); }
-    @Override protected void onResume() { super.onResume(); AlertService.appVisible = true; syncH.removeCallbacks(syncR); syncH.postDelayed(syncR, 1500); AlertService.clearAlerts(this); OverlayAlert.hide(); if (getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).getBoolean("online", false)) askAlertSetup(); web.onResume(); }
+    @Override protected void onResume() { super.onResume(); inst = this; AlertService.appVisible = true; syncH.removeCallbacks(syncR); syncH.postDelayed(syncR, 1500); AlertService.clearAlerts(this); OverlayAlert.hide(); if (getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).getBoolean("online", false)) askAlertSetup(); web.onResume(); }
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); if (web != null && i.getBooleanExtra("accepted", false)) web.evaluateJavascript("try{if(window.refresh)refresh(true)}catch(e){}", null); }
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
-    @Override protected void onDestroy() { if (tracking) stopService(new Intent(this, TrackService.class)); super.onDestroy(); }
+    @Override protected void onDestroy() { if (inst == this) inst = null; if (tracking) stopService(new Intent(this, TrackService.class)); super.onDestroy(); }
 
     @Override public boolean onKeyDown(int k, KeyEvent e) {
         if (k == KeyEvent.KEYCODE_BACK && web.canGoBack()) { web.goBack(); return true; }

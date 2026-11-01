@@ -102,7 +102,11 @@ final class OverlayAlert {
         row.addView(no, lp1); row.addView(yes, lp2); box.addView(row);
 
         no.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { AlertService.mute(id); hide(); } });
-        yes.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { yes.setEnabled(false); yes.setText("Accepting…"); accept(c, id); } });
+        yes.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+            yes.setEnabled(false); yes.setText("Accepting…");
+            openApp(c);                                   // started from the tap itself, which Android always allows
+            accept(c, id);
+        } });
 
         int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT, type,
@@ -145,6 +149,10 @@ final class OverlayAlert {
         curId = "";
     }
 
+    private static void openApp(Context c) {
+        try { c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT).putExtra("accepted", true)); } catch (Exception e) { }
+    }
+
     private static void accept(final Context c, final String id) {
         final SharedPreferences sp = c.getSharedPreferences(AlertService.PREFS, Context.MODE_PRIVATE);
         final Location l = AlertService.lastLoc;
@@ -170,9 +178,7 @@ final class OverlayAlert {
             } catch (Exception e) { msg = "No internet. Ride not accepted"; }
             final String m = msg; final boolean good = ok;
             MAIN.post(new Runnable() { public void run() {
-                if (good) {                                  // open the driver app first, while the overlay still lets us start it from the background
-                    try { c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT).putExtra("accepted", true)); } catch (Exception e) { }
-                }
+                if (good) { openApp(c); MainActivity.refreshWeb(); }
                 hide();
                 Toast.makeText(c, m, Toast.LENGTH_LONG).show();
             } });
