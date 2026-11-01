@@ -152,6 +152,7 @@ public class MainActivity extends Activity {
     private void goOnline(String phone, String pin, String api) {
         getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).edit().putBoolean("online", true).putString("phone", phone).putString("pin", pin).putString("api", api).apply();
         AlertService.start(this);
+        Push.fetchAndRegister(this);
         askAlertSetup();
     }
 

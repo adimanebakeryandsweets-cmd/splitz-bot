@@ -62,6 +62,20 @@ public class AlertService extends Service {
         if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i); else c.startService(i);
     }
 
+    static void channels(Context c) {
+        if (Build.VERSION.SDK_INT < 26) return;
+        NotificationManager nm = (NotificationManager) c.getSystemService(NOTIFICATION_SERVICE);
+        nm.createNotificationChannel(new NotificationChannel(CH_STAY, "Online for rides", NotificationManager.IMPORTANCE_LOW));
+        NotificationChannel ch = new NotificationChannel(CH_RIDE, "New ride alerts", NotificationManager.IMPORTANCE_HIGH);
+        Uri tone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        ch.setSound(tone, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
+        ch.enableVibration(true);
+        ch.setVibrationPattern(new long[]{0, 500, 250, 500, 250, 500});
+        ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        ch.setBypassDnd(true);
+        nm.createNotificationChannel(ch);
+    }
+
     static void clearAlerts(Context c) {
         NotificationManager nm = (NotificationManager) c.getSystemService(NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= 23) {
@@ -73,17 +87,7 @@ public class AlertService extends Service {
         SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
         if (!sp.getBoolean("online", false)) { stopSelf(); return START_NOT_STICKY; }
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(new NotificationChannel(CH_STAY, "Online for rides", NotificationManager.IMPORTANCE_LOW));
-            NotificationChannel ch = new NotificationChannel(CH_RIDE, "New ride alerts", NotificationManager.IMPORTANCE_HIGH);
-            Uri tone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
-            ch.setSound(tone, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
-            ch.enableVibration(true);
-            ch.setVibrationPattern(new long[]{0, 500, 250, 500, 250, 500});
-            ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-            ch.setBypassDnd(true);
-            nm.createNotificationChannel(ch);
-        }
+        channels(this);
         PendingIntent pi = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CH_STAY) : new Notification.Builder(this);
         Notification n = b.setContentTitle("Splitzblr: you are online")
@@ -168,13 +172,17 @@ public class AlertService extends Service {
     }
 
     private void alert(NotificationManager nm, JSONObject r) {
-        String id = r.optString("id");
-        String earn = r.optString("earn", ""), cat = r.optString("cat", "Ride"), pick = r.optString("pickup", "");
+        showRide(this, r.optString("id"), r.optString("earn", ""), r.optString("cat", "Ride"), r.optString("pickup", ""));
+    }
+
+    static void showRide(Context c, String id, String earn, String cat, String pick) {
+        channels(c);
+        NotificationManager nm = (NotificationManager) c.getSystemService(NOTIFICATION_SERVICE);
         String title = "New ride" + (earn.isEmpty() ? "" : " · Rs " + earn);
         String text = cat + (pick.isEmpty() ? "" : " · " + pick);
-        Intent open = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pi = PendingIntent.getActivity(this, 1, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CH_RIDE) : new Notification.Builder(this);
+        Intent open = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pi = PendingIntent.getActivity(c, 1, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(c, CH_RIDE) : new Notification.Builder(c);
         b.setContentTitle(title).setContentText(text).setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pi).setFullScreenIntent(pi, true).setAutoCancel(true)
                 .setCategory(Notification.CATEGORY_ALARM).setPriority(Notification.PRIORITY_MAX)

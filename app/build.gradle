@@ -1,4 +1,6 @@
 plugins { id 'com.android.application' }
+// Push notifications switch on when app/google-services.json (from your Firebase project) is present
+if (file('google-services.json').exists()) { apply plugin: 'com.google.gms.google-services' }
 android {
     namespace 'com.splitzblr.driver'
     compileSdk 34
@@ -11,4 +13,8 @@ android {
     }
     buildTypes { release { minifyEnabled false } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation 'com.google.firebase:firebase-messaging'
 }
