@@ -149,15 +149,55 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void goOnline(String phone, String pin, String api) {
+        getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).edit().putBoolean("online", true).putString("phone", phone).putString("pin", pin).putString("api", api).apply();
+        AlertService.start(this);
+        askAlertSetup();
+    }
+
+    private void goOffline() {
+        getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).edit().putBoolean("online", false).putString("pin", "").apply();
+        stopService(new Intent(this, AlertService.class));
+    }
+
+    // Once: let the alerts reach the lock screen and keep running while the phone sleeps.
+    private void askAlertSetup() {
+        android.content.SharedPreferences sp = getSharedPreferences(AlertService.PREFS, MODE_PRIVATE);
+        try {
+            if (Build.VERSION.SDK_INT >= 34) {
+                android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                if (!nm.canUseFullScreenIntent() && !sp.getBoolean("askedFsi", false)) {
+                    sp.edit().putBoolean("askedFsi", true).apply();
+                    startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + getPackageName())));
+                    return;
+                }
+            }
+            if (Build.VERSION.SDK_INT >= 23 && !sp.getBoolean("askedBat", false)) {
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                    sp.edit().putBoolean("askedBat", true).apply();
+                    startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
+                }
+            }
+        } catch (Exception e) { }
+    }
+
     private class Bridge {
+        @JavascriptInterface public void online(final String phone, final String pin, final String api) {
+            runOnUiThread(new Runnable() { public void run() { goOnline(phone, pin, api); } });
+        }
+        @JavascriptInterface public void offline() {
+            runOnUiThread(new Runnable() { public void run() { goOffline(); } });
+        }
         @JavascriptInterface public void tracking(final boolean on) {
             runOnUiThread(new Runnable() { public void run() { setTracking(on); } });
         }
     }
 
     // Keep the page (and its GPS) running when the app is in the background during a trip.
-    @Override protected void onPause() { super.onPause(); if (!tracking) web.onPause(); }
-    @Override protected void onResume() { super.onResume(); web.onResume(); }
+    @Override protected void onPause() { super.onPause(); AlertService.appVisible = false; if (!tracking) web.onPause(); }
+    @Override protected void onResume() { super.onResume(); AlertService.appVisible = true; AlertService.clearAlerts(this); web.onResume(); }
+    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); }
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
     @Override protected void onDestroy() { if (tracking) stopService(new Intent(this, TrackService.class)); super.onDestroy(); }
 
