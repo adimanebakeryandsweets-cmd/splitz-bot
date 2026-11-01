@@ -165,6 +165,12 @@ public class MainActivity extends Activity {
     private void askAlertSetup() {
         android.content.SharedPreferences sp = getSharedPreferences(AlertService.PREFS, MODE_PRIVATE);
         try {
+            if (Build.VERSION.SDK_INT >= 23 && !android.provider.Settings.canDrawOverlays(this) && !sp.getBoolean("askedOvl", false)) {
+                sp.edit().putBoolean("askedOvl", true).apply();
+                android.widget.Toast.makeText(this, "Turn on \"Allow display over other apps\" so rides pop up on your screen", android.widget.Toast.LENGTH_LONG).show();
+                startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
+                return;
+            }
             if (Build.VERSION.SDK_INT >= 34) {
                 android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
                 if (!nm.canUseFullScreenIntent() && !sp.getBoolean("askedFsi", false)) {
@@ -197,7 +203,7 @@ public class MainActivity extends Activity {
 
     // Keep the page (and its GPS) running when the app is in the background during a trip.
     @Override protected void onPause() { super.onPause(); AlertService.appVisible = false; if (!tracking) web.onPause(); }
-    @Override protected void onResume() { super.onResume(); AlertService.appVisible = true; AlertService.clearAlerts(this); web.onResume(); }
+    @Override protected void onResume() { super.onResume(); AlertService.appVisible = true; AlertService.clearAlerts(this); OverlayAlert.hide(); if (getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).getBoolean("online", false)) askAlertSetup(); web.onResume(); }
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); }
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
     @Override protected void onDestroy() { if (tracking) stopService(new Intent(this, TrackService.class)); super.onDestroy(); }

@@ -45,13 +45,15 @@ public class AlertService extends Service {
     private HandlerThread ht;
     private Handler h;
     private LocationManager lm;
+    static volatile Location lastLoc;
+    private static final Map<String, Long> muted = new HashMap<>();
     private volatile Location loc;
     private PowerManager.WakeLock wl;
     private final Map<String, Long> lastAlert = new HashMap<>();
     private boolean running = false;
 
     private final LocationListener ll = new LocationListener() {
-        @Override public void onLocationChanged(Location l) { loc = l; }
+        @Override public void onLocationChanged(Location l) { loc = l; lastLoc = l; }
         @Override public void onStatusChanged(String p, int s, Bundle b) { }
         @Override public void onProviderEnabled(String p) { }
         @Override public void onProviderDisabled(String p) { }
@@ -119,7 +121,7 @@ public class AlertService extends Service {
                     if (lm.isProviderEnabled(p)) {
                         lm.requestLocationUpdates(p, 15000, 25, ll, ht.getLooper());
                         Location last = lm.getLastKnownLocation(p);
-                        if (last != null && (loc == null || last.getTime() > loc.getTime())) loc = last;
+                        if (last != null && (loc == null || last.getTime() > loc.getTime())) { loc = last; lastLoc = last; }
                     }
                 } catch (Exception e) { }
             }
@@ -167,12 +169,27 @@ public class AlertService extends Service {
             }
         }
         for (String id : new HashSet<>(lastAlert.keySet())) {               // a ride that was taken or expired stops ringing
-            if (!open.contains(id)) { lastAlert.remove(id); nm.cancel(id.hashCode()); }
+            if (!open.contains(id)) { lastAlert.remove(id); nm.cancel(id.hashCode()); OverlayAlert.hideIf(id); }
         }
     }
 
     private void alert(NotificationManager nm, JSONObject r) {
-        showRide(this, r.optString("id"), r.optString("earn", ""), r.optString("cat", "Ride"), r.optString("pickup", ""));
+        deliver(this, r.optString("id"), r.optString("earn", ""), r.optString("cat", "Ride"), r.optString("pickup", ""));
+    }
+
+    static void mute(String id) { synchronized (muted) { muted.put(id, System.currentTimeMillis()); } }
+
+    /** Unlocked phone: pop-up over every app. Locked or screen off: full-screen notification over the lock screen. */
+    static void deliver(Context c, String id, String earn, String cat, String pick) {
+        synchronized (muted) { Long m = muted.get(id); if (m != null && System.currentTimeMillis() - m < 10 * 60000L) return; }
+        boolean locked = false;
+        try {
+            android.app.KeyguardManager km = (android.app.KeyguardManager) c.getSystemService(KEYGUARD_SERVICE);
+            PowerManager pm = (PowerManager) c.getSystemService(POWER_SERVICE);
+            locked = km.isKeyguardLocked() || !pm.isInteractive();
+        } catch (Exception e) { }
+        if (!locked && OverlayAlert.canShow(c)) OverlayAlert.show(c, id, earn, cat, pick);
+        else showRide(c, id, earn, cat, pick);
     }
 
     static void showRide(Context c, String id, String earn, String cat, String pick) {

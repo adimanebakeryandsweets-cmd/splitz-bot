@@ -1,0 +1,163 @@
+package com.splitzblr.driver;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.PixelFormat;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.location.Location;
+import android.media.AudioAttributes;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.provider.Settings;
+import android.view.Gravity;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.Locale;
+
+/** A ride pop-up drawn over every other app (and the home screen) with a ringtone, like a taxi-app driver alert. */
+final class OverlayAlert {
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    private static final long SHOW_MS = 10000;
+    private static View view;
+    private static String curId = "";
+    private static Ringtone ring;
+    private static Vibrator vib;
+    private static final Runnable AUTO = new Runnable() { public void run() { hide(); } };
+
+    static boolean canShow(Context c) { return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c); }
+
+    static void show(final Context c, final String id, final String earn, final String cat, final String pick) {
+        final Context app = c.getApplicationContext();
+        MAIN.post(new Runnable() { public void run() { build(app, id, earn, cat, pick); } });
+    }
+
+    static void hideIf(final String id) {
+        MAIN.post(new Runnable() { public void run() { if (view != null && id.equals(curId)) hide(); } });
+    }
+
+    private static int dp(Context c, int v) { return Math.round(v * c.getResources().getDisplayMetrics().density); }
+
+    private static void build(final Context c, final String id, String earn, String cat, String pick) {
+        if (view != null) { if (id.equals(curId)) return; hide(); }
+        WindowManager wm = (WindowManager) c.getSystemService(Context.WINDOW_SERVICE);
+        LinearLayout box = new LinearLayout(c);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(c, 18), dp(c, 16), dp(c, 18), dp(c, 16));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.parseColor("#0B1F40")); bg.setCornerRadius(dp(c, 20)); bg.setStroke(dp(c, 3), Color.parseColor("#D4AF37"));
+        box.setBackground(bg);
+
+        TextView t1 = new TextView(c); t1.setText("NEW RIDE REQUEST"); t1.setTextColor(Color.parseColor("#F1D77A")); t1.setTextSize(13); t1.setTypeface(Typeface.DEFAULT_BOLD);
+        TextView t2 = new TextView(c); t2.setText(earn.isEmpty() ? cat : "Rs " + earn); t2.setTextColor(Color.WHITE); t2.setTextSize(34); t2.setTypeface(Typeface.DEFAULT_BOLD);
+        TextView t3 = new TextView(c); t3.setText((earn.isEmpty() ? "" : cat + "\n") + (pick.isEmpty() ? "" : "Pickup: " + pick)); t3.setTextColor(Color.parseColor("#B9D6EA")); t3.setTextSize(16);
+        box.addView(t1); box.addView(t2); box.addView(t3);
+
+        LinearLayout row = new LinearLayout(c); row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2); rp.topMargin = dp(c, 14); row.setLayoutParams(rp);
+        Button no = new Button(c); no.setText("Dismiss"); no.setAllCaps(false); no.setTextColor(Color.WHITE); no.setTextSize(16);
+        GradientDrawable nb = new GradientDrawable(); nb.setColor(Color.parseColor("#33496E")); nb.setCornerRadius(dp(c, 14)); no.setBackground(nb);
+        final Button yes = new Button(c); yes.setText("Accept ride"); yes.setAllCaps(false); yes.setTextColor(Color.parseColor("#0B1426")); yes.setTextSize(18); yes.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable yb = new GradientDrawable(); yb.setColor(Color.parseColor("#2BD17E")); yb.setCornerRadius(dp(c, 14)); yes.setBackground(yb);
+        LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, dp(c, 56), 1f); lp1.rightMargin = dp(c, 8);
+        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, dp(c, 56), 2f);
+        row.addView(no, lp1); row.addView(yes, lp2); box.addView(row);
+
+        no.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { AlertService.mute(id); hide(); } });
+        yes.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { yes.setEnabled(false); yes.setText("Accepting…"); accept(c, id); } });
+
+        int type = Build.VERSION.SDK_INT >= 26 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT, type,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+                PixelFormat.TRANSLUCENT);
+        lp.gravity = Gravity.TOP; lp.x = 0; lp.y = dp(c, 40);
+        lp.horizontalMargin = 0.03f;
+        try { wm.addView(box, lp); } catch (Exception e) { return; }
+        view = box; curId = id;
+        startSound(c);
+        MAIN.postDelayed(AUTO, SHOW_MS);
+    }
+
+    private static void startSound(Context c) {
+        try {
+            Uri u = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+            ring = RingtoneManager.getRingtone(c, u);
+            if (ring != null) {
+                if (Build.VERSION.SDK_INT >= 21) ring.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
+                if (Build.VERSION.SDK_INT >= 28) ring.setLooping(true);
+                ring.play();
+            }
+        } catch (Exception e) { }
+        try {
+            vib = (Vibrator) c.getSystemService(Context.VIBRATOR_SERVICE);
+            long[] pat = {0, 500, 300, 500, 300};
+            if (Build.VERSION.SDK_INT >= 26) vib.vibrate(VibrationEffect.createWaveform(pat, 0)); else vib.vibrate(pat, 0);
+        } catch (Exception e) { }
+    }
+
+    static void hide() {
+        MAIN.removeCallbacks(AUTO);
+        try { if (ring != null) ring.stop(); } catch (Exception e) { }
+        try { if (vib != null) vib.cancel(); } catch (Exception e) { }
+        ring = null;
+        if (view != null) {
+            try { ((WindowManager) view.getContext().getSystemService(Context.WINDOW_SERVICE)).removeView(view); } catch (Exception e) { }
+            view = null;
+        }
+        curId = "";
+    }
+
+    private static void accept(final Context c, final String id) {
+        final SharedPreferences sp = c.getSharedPreferences(AlertService.PREFS, Context.MODE_PRIVATE);
+        final Location l = AlertService.lastLoc;
+        new Thread(new Runnable() { public void run() {
+            String msg; boolean ok = false;
+            try {
+                String u = sp.getString("api", "") + "?action=accept&id=" + URLEncoder.encode(id, "UTF-8")
+                        + "&phone=" + URLEncoder.encode(sp.getString("phone", ""), "UTF-8") + "&pin=" + URLEncoder.encode(sp.getString("pin", ""), "UTF-8")
+                        + (l != null ? "&lat=" + String.format(Locale.US, "%.5f", l.getLatitude()) + "&lng=" + String.format(Locale.US, "%.5f", l.getLongitude()) : "");
+                HttpURLConnection h = (HttpURLConnection) new URL(u).openConnection();
+                h.setConnectTimeout(8000); h.setReadTimeout(15000);
+                StringBuilder sb = new StringBuilder();
+                try (BufferedReader r = new BufferedReader(new InputStreamReader(h.getInputStream(), "UTF-8"))) { String line; while ((line = r.readLine()) != null) sb.append(line); }
+                JSONObject j = new JSONObject(sb.toString());
+                String er = j.optString("error", "");
+                if (j.optBoolean("ok")) { ok = true; msg = "Ride accepted"; }
+                else if ("taken".equals(er)) msg = "Another driver took this ride";
+                else if ("due".equals(er)) msg = "Pay your commission dues to accept rides";
+                else if ("busy".equals(er)) msg = "Finish your current ride first";
+                else if ("expired".equals(er)) msg = "This ride is no longer available";
+                else if ("far".equals(er)) msg = "This pickup is too far from you";
+                else msg = "Could not accept this ride";
+            } catch (Exception e) { msg = "No internet. Ride not accepted"; }
+            final String m = msg; final boolean good = ok;
+            MAIN.post(new Runnable() { public void run() {
+                hide();
+                Toast.makeText(c, m, Toast.LENGTH_LONG).show();
+                if (good) {
+                    try { c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)); } catch (Exception e) { }
+                }
+            } });
+        } }).start();
+    }
+}
