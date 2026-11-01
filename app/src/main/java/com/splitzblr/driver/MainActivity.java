@@ -149,6 +149,26 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static final String API_URL = "https://script.google.com/macros/s/AKfycbxQPZqQ-5u6oRrallwmfv08PZEnsjHzn7S4xLPGayY1QP1F6nEKbZjO1E6fEBOHEEEH/exec";
+    private final android.os.Handler syncH = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable syncR = new Runnable() { public void run() {
+        try {
+            web.evaluateJavascript("(function(){try{return (localStorage.getItem('sbd_phone')||'')+'|'+(localStorage.getItem('sbd_pin')||'')}catch(e){return '|'}})()", new ValueCallback<String>() {
+                public void onReceiveValue(String v) {
+                    if (v == null) return;
+                    v = v.replace("\"", "");
+                    String[] p = v.split("\\|", -1);
+                    android.content.SharedPreferences sp = getSharedPreferences(AlertService.PREFS, MODE_PRIVATE);
+                    boolean on = sp.getBoolean("online", false);
+                    if (p.length == 2 && !p[0].isEmpty() && !p[1].isEmpty()) {
+                        if (!on || !p[0].equals(sp.getString("phone", "")) || !p[1].equals(sp.getString("pin", ""))) goOnline(p[0], p[1], API_URL);
+                    } else if (on) goOffline();
+                }
+            });
+        } catch (Exception e) { }
+        syncH.postDelayed(this, 4000);
+    } };
+
     private void goOnline(String phone, String pin, String api) {
         getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).edit().putBoolean("online", true).putString("phone", phone).putString("pin", pin).putString("api", api).apply();
         AlertService.start(this);
@@ -173,6 +193,10 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT < 34) return true;
         return ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).canUseFullScreenIntent();
     }
+    private boolean okLoc() {
+        if (!hasLocation()) return false;
+        return Build.VERSION.SDK_INT < 29 || checkSelfPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
     private boolean okNotify() {
         return Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
     }
@@ -181,12 +205,13 @@ public class MainActivity extends Activity {
     private void askAlertSetup() {
         if (isFinishing() || (setupDlg != null && setupDlg.isShowing())) return;
         if (System.currentTimeMillis() < laterUntil) return;
-        final boolean o = okOverlay(), b = okBattery(), f = okFullScreen(), n = okNotify();
-        if (o && b && f && n) return;
+        final boolean o = okOverlay(), b = okBattery(), f = okFullScreen(), n = okNotify(), lc = okLoc();
+        if (o && b && f && n && lc) return;
         String msg = (o ? "\u2705 " : "\u274C ") + "Display over other apps\n   (rides pop up over any screen)\n\n"
                 + (b ? "\u2705 " : "\u274C ") + "Battery: Unrestricted\n   (keeps ride alerts working with the screen off)\n\n"
                 + (f ? "\u2705 " : "\u274C ") + "Full-screen alerts on the lock screen\n\n"
-                + (n ? "\u2705 " : "\u274C ") + "Notifications";
+                + (n ? "\u2705 " : "\u274C ") + "Notifications\n\n"
+                + (lc ? "\u2705 " : "\u274C ") + "Location: Allow all the time\n   (finds rides near you while the app is closed)";
         final boolean fo = o, fb = b, ff = f;
         setupDlg = new android.app.AlertDialog.Builder(this)
             .setTitle("Allow these to receive rides")
@@ -212,7 +237,13 @@ public class MainActivity extends Activity {
                 return;
             }
             if (!f && Build.VERSION.SDK_INT >= 34) { startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pkg)); return; }
-            if (Build.VERSION.SDK_INT >= 33) { requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 4); return; }
+            if (!okNotify()) { requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 4); return; }
+            if (!okLoc()) {
+                if (!hasLocation()) { requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1); return; }
+                android.widget.Toast.makeText(this, "Open Permissions, then Location, and choose Allow all the time.", android.widget.Toast.LENGTH_LONG).show();
+                startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg));
+                return;
+            }
         } catch (Exception e) {
             try { startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)); } catch (Exception x) { }
         }
@@ -231,8 +262,8 @@ public class MainActivity extends Activity {
     }
 
     // Keep the page (and its GPS) running when the app is in the background during a trip.
-    @Override protected void onPause() { super.onPause(); AlertService.appVisible = false; if (!tracking) web.onPause(); }
-    @Override protected void onResume() { super.onResume(); AlertService.appVisible = true; AlertService.clearAlerts(this); OverlayAlert.hide(); if (getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).getBoolean("online", false)) askAlertSetup(); web.onResume(); }
+    @Override protected void onPause() { super.onPause(); syncH.removeCallbacks(syncR); AlertService.appVisible = false; if (!tracking) web.onPause(); }
+    @Override protected void onResume() { super.onResume(); AlertService.appVisible = true; syncH.removeCallbacks(syncR); syncH.postDelayed(syncR, 1500); AlertService.clearAlerts(this); OverlayAlert.hide(); if (getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).getBoolean("online", false)) askAlertSetup(); web.onResume(); }
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); }
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
     @Override protected void onDestroy() { if (tracking) stopService(new Intent(this, TrackService.class)); super.onDestroy(); }
