@@ -174,13 +174,23 @@ public class AlertService extends Service {
     }
 
     private void alert(NotificationManager nm, JSONObject r) {
-        deliver(this, r.optString("id"), r.optString("earn", ""), r.optString("cat", "Ride"), r.optString("pickup", ""));
+        deliver(this, r.optString("id"), r.optString("earn", ""), r.optString("cat", "Ride"), r.optString("pickup", ""),
+                details(r.optString("drop", ""), r.optString("pickMin", ""), r.optString("tripEst", ""), r.optString("tripKm", "")));
     }
 
     static void mute(String id) { synchronized (muted) { muted.put(id, System.currentTimeMillis()); } }
 
     /** Unlocked phone: pop-up over every app. Locked or screen off: full-screen notification over the lock screen. */
-    static void deliver(Context c, String id, String earn, String cat, String pick) {
+    static String details(String drop, String pm, String tm, String tk) {
+        StringBuilder s = new StringBuilder();
+        if (!drop.isEmpty() && !"null".equals(drop)) s.append("Drop: ").append(drop);
+        if (!pm.isEmpty() && !"null".equals(pm)) s.append(s.length() > 0 ? "\n" : "").append("To pickup: ~").append(pm).append(" min");
+        if (!tm.isEmpty() && !"null".equals(tm)) s.append(s.length() > 0 ? "\n" : "").append("Trip: ~").append(tm).append(" min")
+                .append(!tk.isEmpty() && !"null".equals(tk) ? " (" + tk + " km)" : "");
+        return s.toString();
+    }
+
+    static void deliver(Context c, String id, String earn, String cat, String pick, String more) {
         synchronized (muted) { Long m = muted.get(id); if (m != null && System.currentTimeMillis() - m < 10 * 60000L) return; }
         boolean locked = false;
         try {
@@ -188,19 +198,19 @@ public class AlertService extends Service {
             PowerManager pm = (PowerManager) c.getSystemService(POWER_SERVICE);
             locked = km.isKeyguardLocked() || !pm.isInteractive();
         } catch (Exception e) { }
-        if (!locked && OverlayAlert.canShow(c)) OverlayAlert.show(c, id, earn, cat, pick);
-        else showRide(c, id, earn, cat, pick);
+        if (!locked && OverlayAlert.canShow(c)) OverlayAlert.show(c, id, earn, cat, pick, more);
+        else showRide(c, id, earn, cat, pick, more);
     }
 
-    static void showRide(Context c, String id, String earn, String cat, String pick) {
+    static void showRide(Context c, String id, String earn, String cat, String pick, String more) {
         channels(c);
         NotificationManager nm = (NotificationManager) c.getSystemService(NOTIFICATION_SERVICE);
         String title = "New ride" + (earn.isEmpty() ? "" : " · Rs " + earn);
-        String text = cat + (pick.isEmpty() ? "" : " · " + pick);
+        String text = cat + (pick.isEmpty() ? "" : " · " + pick) + (more.isEmpty() ? "" : "\n" + more);
         Intent open = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pi = PendingIntent.getActivity(c, 1, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(c, CH_RIDE) : new Notification.Builder(c);
-        b.setContentTitle(title).setContentText(text).setSmallIcon(android.R.drawable.ic_dialog_info)
+        b.setContentTitle(title).setContentText(text).setStyle(new Notification.BigTextStyle().bigText(text)).setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pi).setFullScreenIntent(pi, true).setAutoCancel(true)
                 .setCategory(Notification.CATEGORY_ALARM).setPriority(Notification.PRIORITY_MAX)
                 .setVisibility(Notification.VISIBILITY_PUBLIC).setTimeoutAfter(SHOW_MS);

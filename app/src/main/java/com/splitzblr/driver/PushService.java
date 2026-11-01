@@ -16,6 +16,7 @@ public class PushService extends FirebaseMessagingService {
         try { AlertService.start(this); } catch (Exception e) { }           // brings the background checker back, which repeats the ring
         if (AlertService.appVisible) return;
         String id = d.get("id") == null ? "" : d.get("id");
-        AlertService.deliver(this, id, d.get("earn") == null ? "" : d.get("earn"), d.get("cat") == null ? "Ride" : d.get("cat"), d.get("pickup") == null ? "" : d.get("pickup"));
+        AlertService.deliver(this, id, d.get("earn") == null ? "" : d.get("earn"), d.get("cat") == null ? "Ride" : d.get("cat"), d.get("pickup") == null ? "" : d.get("pickup"),
+                AlertService.details(d.get("drop") == null ? "" : d.get("drop"), d.get("pm") == null ? "" : d.get("pm"), d.get("tm") == null ? "" : d.get("tm"), d.get("tk") == null ? "" : d.get("tk")));
     }
 }

@@ -47,9 +47,9 @@ final class OverlayAlert {
 
     static boolean canShow(Context c) { return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c); }
 
-    static void show(final Context c, final String id, final String earn, final String cat, final String pick) {
+    static void show(final Context c, final String id, final String earn, final String cat, final String pick, final String more) {
         final Context app = c.getApplicationContext();
-        MAIN.post(new Runnable() { public void run() { build(app, id, earn, cat, pick); } });
+        MAIN.post(new Runnable() { public void run() { build(app, id, earn, cat, pick, more); } });
     }
 
     static void hideIf(final String id) {
@@ -58,7 +58,7 @@ final class OverlayAlert {
 
     private static int dp(Context c, int v) { return Math.round(v * c.getResources().getDisplayMetrics().density); }
 
-    private static void build(final Context c, final String id, String earn, String cat, String pick) {
+    private static void build(final Context c, final String id, String earn, String cat, String pick, String more) {
         if (view != null) { if (id.equals(curId)) return; hide(); }
         WindowManager wm = (WindowManager) c.getSystemService(Context.WINDOW_SERVICE);
         LinearLayout box = new LinearLayout(c);
@@ -70,7 +70,7 @@ final class OverlayAlert {
 
         TextView t1 = new TextView(c); t1.setText("NEW RIDE REQUEST"); t1.setTextColor(Color.parseColor("#F1D77A")); t1.setTextSize(13); t1.setTypeface(Typeface.DEFAULT_BOLD);
         TextView t2 = new TextView(c); t2.setText(earn.isEmpty() ? cat : "Rs " + earn); t2.setTextColor(Color.WHITE); t2.setTextSize(34); t2.setTypeface(Typeface.DEFAULT_BOLD);
-        TextView t3 = new TextView(c); t3.setText((earn.isEmpty() ? "" : cat + "\n") + (pick.isEmpty() ? "" : "Pickup: " + pick)); t3.setTextColor(Color.parseColor("#B9D6EA")); t3.setTextSize(16);
+        TextView t3 = new TextView(c); t3.setText((earn.isEmpty() ? "" : cat + "\n") + (pick.isEmpty() ? "" : "Pickup: " + pick) + (more.isEmpty() ? "" : "\n" + more)); t3.setTextColor(Color.parseColor("#B9D6EA")); t3.setTextSize(16);
         box.addView(t1); box.addView(t2); box.addView(t3);
 
         LinearLayout row = new LinearLayout(c); row.setOrientation(LinearLayout.HORIZONTAL);
