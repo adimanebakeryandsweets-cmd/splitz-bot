@@ -56,6 +56,18 @@ final class OverlayAlert {
         MAIN.post(new Runnable() { public void run() { if (view != null && id.equals(curId)) hide(); } });
     }
 
+    private static View infoRow(Context c, String km, String text, boolean hi) {
+        LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.HORIZONTAL); r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setPadding(dp(c, 10), dp(c, 8), dp(c, 10), dp(c, 8));
+        LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(-1, -2); rl.topMargin = dp(c, 8); r.setLayoutParams(rl);
+        if (hi) { GradientDrawable g = new GradientDrawable(); g.setColor(Color.parseColor("#1B3A6B")); g.setCornerRadius(dp(c, 12)); g.setStroke(dp(c, 2), Color.parseColor("#F1D77A")); r.setBackground(g); }
+        TextView a = new TextView(c); a.setText(km.isEmpty() ? "" : km + " KM"); a.setTextColor(Color.parseColor(hi ? "#F1D77A" : "#FFFFFF")); a.setTextSize(hi ? 24 : 20); a.setTypeface(Typeface.DEFAULT_BOLD);
+        r.addView(a, new LinearLayout.LayoutParams(dp(c, 96), -2));
+        TextView b = new TextView(c); b.setText(text); b.setTextColor(hi ? Color.WHITE : Color.parseColor("#B9D6EA")); b.setTextSize(hi ? 18 : 16); if (hi) b.setTypeface(Typeface.DEFAULT_BOLD);
+        r.addView(b, new LinearLayout.LayoutParams(0, -2, 1f));
+        return r;
+    }
+
     private static int dp(Context c, int v) { return Math.round(v * c.getResources().getDisplayMetrics().density); }
 
     private static void build(final Context c, final String id, String earn, String cat, String pick, String more) {
@@ -68,10 +80,16 @@ final class OverlayAlert {
         bg.setColor(Color.parseColor("#0B1F40")); bg.setCornerRadius(dp(c, 20)); bg.setStroke(dp(c, 3), Color.parseColor("#D4AF37"));
         box.setBackground(bg);
 
+        String[] p = AlertService.parts(more);
         TextView t1 = new TextView(c); t1.setText("NEW RIDE REQUEST"); t1.setTextColor(Color.parseColor("#F1D77A")); t1.setTextSize(13); t1.setTypeface(Typeface.DEFAULT_BOLD);
-        TextView t2 = new TextView(c); t2.setText(earn.isEmpty() ? cat : "Rs " + earn); t2.setTextColor(Color.WHITE); t2.setTextSize(34); t2.setTypeface(Typeface.DEFAULT_BOLD);
-        TextView t3 = new TextView(c); t3.setText((earn.isEmpty() ? "" : cat + "\n") + (pick.isEmpty() ? "" : "Pickup: " + pick) + (more.isEmpty() ? "" : "\n" + more)); t3.setTextColor(Color.parseColor("#B9D6EA")); t3.setTextSize(16);
-        box.addView(t1); box.addView(t2); box.addView(t3);
+        box.addView(t1);
+        TextView t2 = new TextView(c); t2.setText(earn.isEmpty() ? cat : "Rs " + earn); t2.setTextColor(Color.parseColor("#0B1426")); t2.setTextSize(36); t2.setTypeface(Typeface.DEFAULT_BOLD);
+        t2.setPadding(dp(c, 16), dp(c, 2), dp(c, 16), dp(c, 2));
+        GradientDrawable pb = new GradientDrawable(); pb.setColor(Color.parseColor("#F1D77A")); pb.setCornerRadius(dp(c, 12)); t2.setBackground(pb);
+        LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(-2, -2); pp.topMargin = dp(c, 6); box.addView(t2, pp);
+        if (!earn.isEmpty()) { TextView tc = new TextView(c); tc.setText(cat); tc.setTextColor(Color.parseColor("#B9D6EA")); tc.setTextSize(15); box.addView(tc); }
+        if (!pick.isEmpty()) box.addView(infoRow(c, p[0], "Pickup: " + pick + (p[1].isEmpty() ? "" : " (" + p[1] + " min)"), false));
+        if (!p[2].isEmpty()) box.addView(infoRow(c, p[3], "Drop: " + p[2] + (p[4].isEmpty() ? "" : " (~" + p[4] + " min)"), true));
 
         LinearLayout row = new LinearLayout(c); row.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2); rp.topMargin = dp(c, 14); row.setLayoutParams(rp);
@@ -152,11 +170,11 @@ final class OverlayAlert {
             } catch (Exception e) { msg = "No internet. Ride not accepted"; }
             final String m = msg; final boolean good = ok;
             MAIN.post(new Runnable() { public void run() {
+                if (good) {                                  // open the driver app first, while the overlay still lets us start it from the background
+                    try { c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT).putExtra("accepted", true)); } catch (Exception e) { }
+                }
                 hide();
                 Toast.makeText(c, m, Toast.LENGTH_LONG).show();
-                if (good) {
-                    try { c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)); } catch (Exception e) { }
-                }
             } });
         } }).start();
     }

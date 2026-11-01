@@ -17,6 +17,6 @@ public class PushService extends FirebaseMessagingService {
         if (AlertService.appVisible) return;
         String id = d.get("id") == null ? "" : d.get("id");
         AlertService.deliver(this, id, d.get("earn") == null ? "" : d.get("earn"), d.get("cat") == null ? "Ride" : d.get("cat"), d.get("pickup") == null ? "" : d.get("pickup"),
-                AlertService.details(d.get("drop") == null ? "" : d.get("drop"), d.get("pm") == null ? "" : d.get("pm"), d.get("tm") == null ? "" : d.get("tm"), d.get("tk") == null ? "" : d.get("tk")));
+                AlertService.details(d.get("pk"), d.get("pm"), d.get("drop"), d.get("tk"), d.get("tm")));
     }
 }

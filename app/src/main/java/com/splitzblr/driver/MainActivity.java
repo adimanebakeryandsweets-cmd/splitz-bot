@@ -264,7 +264,7 @@ public class MainActivity extends Activity {
     // Keep the page (and its GPS) running when the app is in the background during a trip.
     @Override protected void onPause() { super.onPause(); syncH.removeCallbacks(syncR); AlertService.appVisible = false; if (!tracking) web.onPause(); }
     @Override protected void onResume() { super.onResume(); AlertService.appVisible = true; syncH.removeCallbacks(syncR); syncH.postDelayed(syncR, 1500); AlertService.clearAlerts(this); OverlayAlert.hide(); if (getSharedPreferences(AlertService.PREFS, MODE_PRIVATE).getBoolean("online", false)) askAlertSetup(); web.onResume(); }
-    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); }
+    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); if (web != null && i.getBooleanExtra("accepted", false)) web.evaluateJavascript("try{if(window.refresh)refresh(true)}catch(e){}", null); }
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
     @Override protected void onDestroy() { if (tracking) stopService(new Intent(this, TrackService.class)); super.onDestroy(); }
 

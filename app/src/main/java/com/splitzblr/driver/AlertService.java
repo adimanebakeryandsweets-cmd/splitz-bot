@@ -175,18 +175,28 @@ public class AlertService extends Service {
 
     private void alert(NotificationManager nm, JSONObject r) {
         deliver(this, r.optString("id"), r.optString("earn", ""), r.optString("cat", "Ride"), r.optString("pickup", ""),
-                details(r.optString("drop", ""), r.optString("pickMin", ""), r.optString("tripEst", ""), r.optString("tripKm", "")));
+                details(r.optString("distanceKm", ""), r.optString("pickMin", ""), r.optString("drop", ""), r.optString("tripKm", ""), r.optString("tripEst", "")));
     }
 
     static void mute(String id) { synchronized (muted) { muted.put(id, System.currentTimeMillis()); } }
 
     /** Unlocked phone: pop-up over every app. Locked or screen off: full-screen notification over the lock screen. */
-    static String details(String drop, String pm, String tm, String tk) {
+    static final String SEP = "\u0001";
+    static String clean(String s) { return s == null || "null".equals(s) ? "" : s; }
+    /** pickup km, pickup minutes, drop, trip km, trip minutes — packed for the pop-up and the notification */
+    static String details(String pk, String pm, String drop, String tk, String tm) {
+        return clean(pk) + SEP + clean(pm) + SEP + clean(drop) + SEP + clean(tk) + SEP + clean(tm);
+    }
+    static String[] parts(String more) {
+        String[] p = (more == null ? "" : more).split(SEP, -1), o = new String[]{"", "", "", "", ""};
+        for (int i = 0; i < 5 && i < p.length; i++) o[i] = p[i];
+        return o;
+    }
+    static String plain(String pick, String more) {
+        String[] p = parts(more);
         StringBuilder s = new StringBuilder();
-        if (!drop.isEmpty() && !"null".equals(drop)) s.append("Drop: ").append(drop);
-        if (!pm.isEmpty() && !"null".equals(pm)) s.append(s.length() > 0 ? "\n" : "").append("To pickup: ~").append(pm).append(" min");
-        if (!tm.isEmpty() && !"null".equals(tm)) s.append(s.length() > 0 ? "\n" : "").append("Trip: ~").append(tm).append(" min")
-                .append(!tk.isEmpty() && !"null".equals(tk) ? " (" + tk + " km)" : "");
+        if (!pick.isEmpty()) s.append("Pickup: ").append(pick).append(p[0].isEmpty() ? "" : " · " + p[0] + " km").append(p[1].isEmpty() ? "" : " (" + p[1] + " min)");
+        if (!p[2].isEmpty()) s.append(s.length() > 0 ? "\n" : "").append("Drop: ").append(p[2]).append(p[3].isEmpty() ? "" : " · " + p[3] + " km").append(p[4].isEmpty() ? "" : " (~" + p[4] + " min)");
         return s.toString();
     }
 
@@ -206,7 +216,7 @@ public class AlertService extends Service {
         channels(c);
         NotificationManager nm = (NotificationManager) c.getSystemService(NOTIFICATION_SERVICE);
         String title = "New ride" + (earn.isEmpty() ? "" : " · Rs " + earn);
-        String text = cat + (pick.isEmpty() ? "" : " · " + pick) + (more.isEmpty() ? "" : "\n" + more);
+        String text = cat + "\n" + plain(pick, more);
         Intent open = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pi = PendingIntent.getActivity(c, 1, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(c, CH_RIDE) : new Notification.Builder(c);
