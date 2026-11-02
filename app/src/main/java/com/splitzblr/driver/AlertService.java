@@ -174,7 +174,7 @@ public class AlertService extends Service {
     }
 
     private void alert(NotificationManager nm, JSONObject r) {
-        deliver(this, r.optString("id"), r.optString("earn", ""), r.optString("cat", "Ride"), r.optString("pickup", ""),
+        deliver(this, r.optString("id"), r.optString("earn", ""), r.optString("alertCat", r.optString("cat", "Ride")), r.optString("pickup", ""),
                 details(r.optString("distanceKm", ""), r.optString("pickMin", ""), r.optString("drop", ""), r.optString("tripKm", ""), r.optString("tripEst", "")));
     }
 

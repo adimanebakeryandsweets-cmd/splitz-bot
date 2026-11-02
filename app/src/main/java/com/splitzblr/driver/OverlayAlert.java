@@ -87,7 +87,15 @@ final class OverlayAlert {
         t2.setPadding(dp(c, 16), dp(c, 2), dp(c, 16), dp(c, 2));
         GradientDrawable pb = new GradientDrawable(); pb.setColor(Color.parseColor("#F1D77A")); pb.setCornerRadius(dp(c, 12)); t2.setBackground(pb);
         LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(-2, -2); pp.topMargin = dp(c, 6); box.addView(t2, pp);
-        if (!earn.isEmpty()) { TextView tc = new TextView(c); tc.setText(cat); tc.setTextColor(Color.parseColor("#B9D6EA")); tc.setTextSize(15); box.addView(tc); }
+        if (!earn.isEmpty()) {
+            TextView tc = new TextView(c); tc.setText(cat);
+            if (cat.startsWith("Outstation")) {            // one way / round trip and the destination state, highlighted
+                tc.setTextColor(Color.parseColor("#1A1200")); tc.setTextSize(17); tc.setTypeface(Typeface.DEFAULT_BOLD);
+                tc.setPadding(dp(c, 12), dp(c, 5), dp(c, 12), dp(c, 5));
+                GradientDrawable cb = new GradientDrawable(); cb.setColor(Color.parseColor("#FFD54A")); cb.setCornerRadius(dp(c, 10)); tc.setBackground(cb);
+                LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-2, -2); cp.topMargin = dp(c, 6); cp.bottomMargin = dp(c, 2); box.addView(tc, cp);
+            } else { tc.setTextColor(Color.parseColor("#B9D6EA")); tc.setTextSize(15); box.addView(tc); }
+        }
         if (!pick.isEmpty()) box.addView(infoRow(c, p[0], "Pickup: " + pick + (p[1].isEmpty() ? "" : " (" + p[1] + " min)"), false));
         if (!p[2].isEmpty()) box.addView(infoRow(c, p[3], "Drop: " + p[2] + (p[4].isEmpty() ? "" : " (~" + p[4] + " min)"), true));
 
