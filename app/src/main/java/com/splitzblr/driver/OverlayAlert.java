@@ -89,7 +89,7 @@ final class OverlayAlert {
         LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(-2, -2); pp.topMargin = dp(c, 6); box.addView(t2, pp);
         if (!earn.isEmpty()) {
             TextView tc = new TextView(c); tc.setText(cat);
-            if (cat.startsWith("Outstation")) {            // one way / round trip and the destination state, highlighted
+            if (cat.startsWith("Outstation") || cat.contains(" stops")) {            // one way / round trip and the destination state, highlighted
                 tc.setTextColor(Color.parseColor("#1A1200")); tc.setTextSize(17); tc.setTypeface(Typeface.DEFAULT_BOLD);
                 tc.setPadding(dp(c, 12), dp(c, 5), dp(c, 12), dp(c, 5));
                 GradientDrawable cb = new GradientDrawable(); cb.setColor(Color.parseColor("#FFD54A")); cb.setCornerRadius(dp(c, 10)); tc.setBackground(cb);
