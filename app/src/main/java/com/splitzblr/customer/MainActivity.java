@@ -28,6 +28,12 @@ public class MainActivity extends Activity {
         web = new WebView(this);
         web.setBackgroundColor(Color.parseColor("#0a1f40"));
         setContentView(web);
+        web.setOnApplyWindowInsetsListener(new android.view.View.OnApplyWindowInsetsListener() {
+            @SuppressWarnings("deprecation") public android.view.WindowInsets onApplyWindowInsets(android.view.View v, android.view.WindowInsets i) {
+                v.setPadding(i.getSystemWindowInsetLeft(), i.getSystemWindowInsetTop(), i.getSystemWindowInsetRight(), Math.max(i.getSystemWindowInsetBottom(), 0));
+                return i;
+            }
+        });
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
