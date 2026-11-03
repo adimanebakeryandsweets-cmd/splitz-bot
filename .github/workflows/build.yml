@@ -14,7 +14,7 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: '8.7' }
-      - run: gradle assembleDebug --no-daemon --stacktrace
+      - run: gradle assembleDebug bundleRelease --no-daemon --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: SplitzblrDriver-apk
@@ -22,10 +22,12 @@ jobs:
       - name: Publish APK to the apk branch
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk /tmp/SplitzblrDriver.apk
+          cp app/build/outputs/bundle/release/app-release.aab /tmp/unsigned.aab
           git config user.name "build"; git config user.email "build@users.noreply.github.com"
           git checkout --orphan apkbuild
           git rm -rf . >/dev/null
           cp /tmp/SplitzblrDriver.apk .
-          git add SplitzblrDriver.apk
+          cp /tmp/unsigned.aab .
+          git add SplitzblrDriver.apk unsigned.aab
           git commit -m "APK build"
           git push -f origin HEAD:driver-app-apk
