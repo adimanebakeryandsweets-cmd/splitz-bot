@@ -1,0 +1,80 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.splitzblr.customer"
+4    android:versionCode="3"
+5    android:versionName="1.2" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="36" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:3:5-67
+11-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:3:22-64
+12    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+12-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:4:5-79
+12-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:4:22-76
+13    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+13-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:5:5-81
+13-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:5:22-78
+14
+15    <application
+15-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:6:5-29:19
+16        android:allowBackup="false"
+16-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:7:9-36
+17        android:extractNativeLibs="false"
+18        android:icon="@mipmap/ic_launcher"
+18-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:8:9-43
+19        android:label="Splitzblr"
+19-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:9:9-34
+20        android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+20-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:11:9-71
+21        android:usesCleartextTraffic="false" >
+21-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:10:9-45
+22        <activity
+22-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:12:9-28:20
+23            android:name="com.splitzblr.customer.MainActivity"
+23-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:13:13-41
+24            android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+24-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:16:13-81
+25            android:exported="true"
+25-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:14:13-36
+26            android:launchMode="singleTask"
+26-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:15:13-44
+27            android:windowSoftInputMode="adjustResize" >
+27-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:17:13-55
+28            <intent-filter>
+28-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:18:13-21:29
+29                <action android:name="android.intent.action.MAIN" />
+29-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:19:17-69
+29-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:19:25-66
+30
+31                <category android:name="android.intent.category.LAUNCHER" />
+31-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:20:17-77
+31-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:20:27-74
+32            </intent-filter>
+33            <intent-filter android:autoVerify="false" >
+33-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:22:13-27:29
+33-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:22:28-54
+34                <action android:name="android.intent.action.VIEW" />
+34-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:23:17-69
+34-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:23:25-66
+35
+36                <category android:name="android.intent.category.DEFAULT" />
+36-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:24:17-76
+36-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:24:27-73
+37                <category android:name="android.intent.category.BROWSABLE" />
+37-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:25:17-78
+37-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:25:27-75
+38
+39                <data
+39-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:26:17-77
+40                    android:host="splitzblr.com"
+40-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:26:46-74
+41                    android:scheme="https" />
+41-->/home/runner/work/splitz-bot/splitz-bot/app/src/main/AndroidManifest.xml:26:23-45
+42            </intent-filter>
+43        </activity>
+44    </application>
+45
+46</manifest>

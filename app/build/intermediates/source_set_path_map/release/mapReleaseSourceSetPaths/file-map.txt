@@ -1,0 +1,7 @@
+com.splitzblr.customer.app-pngs-0 /home/runner/work/splitz-bot/splitz-bot/app/build/generated/res/pngs/release
+com.splitzblr.customer.app-resValues-1 /home/runner/work/splitz-bot/splitz-bot/app/build/generated/res/resValues/release
+com.splitzblr.customer.app-packageReleaseResources-2 /home/runner/work/splitz-bot/splitz-bot/app/build/intermediates/incremental/release/packageReleaseResources/merged.dir
+com.splitzblr.customer.app-packageReleaseResources-3 /home/runner/work/splitz-bot/splitz-bot/app/build/intermediates/incremental/release/packageReleaseResources/stripped.dir
+com.splitzblr.customer.app-release-4 /home/runner/work/splitz-bot/splitz-bot/app/build/intermediates/merged_res/release/mergeReleaseResources
+com.splitzblr.customer.app-main-5 /home/runner/work/splitz-bot/splitz-bot/app/src/main/res
+com.splitzblr.customer.app-release-6 /home/runner/work/splitz-bot/splitz-bot/app/src/release/res
