@@ -51,14 +51,24 @@ public class MainActivity extends Activity {
             @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
                 cb.invoke(origin, hasLocation(), false);
             }
-            // internet calls with the rider: allow the page to use the microphone once the phone permission is given
+            // microphone (internet calls) and camera (registration photos): allow the page once the phone permission is given
             @Override public void onPermissionRequest(final android.webkit.PermissionRequest req) {
                 runOnUiThread(new Runnable() { public void run() {
-                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                        req.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                    List<String> need = new ArrayList<>(), ok = new ArrayList<>();
+                    for (String r : req.getResources()) {
+                        if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) {
+                            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) ok.add(r);
+                            else { need.add(Manifest.permission.RECORD_AUDIO); }
+                        } else if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) {
+                            if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) ok.add(r);
+                            else { need.add(Manifest.permission.CAMERA); }
+                        }
+                    }
+                    if (need.isEmpty()) {
+                        if (ok.isEmpty()) req.deny(); else req.grant(ok.toArray(new String[0]));
                     } else {
                         pendingReq = req;
-                        requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 3);
+                        requestPermissions(need.toArray(new String[0]), 3);
                     }
                 }});
             }
@@ -122,8 +132,12 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(code, perms, res);
         if (code == 3) {
             if (pendingReq != null) {
-                if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) pendingReq.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE});
-                else pendingReq.deny();
+                List<String> ok = new ArrayList<>();
+                for (String r : pendingReq.getResources()) {
+                    if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r) && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) ok.add(r);
+                    if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r) && checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) ok.add(r);
+                }
+                if (ok.isEmpty()) pendingReq.deny(); else pendingReq.grant(ok.toArray(new String[0]));
                 pendingReq = null;
             }
             return;
